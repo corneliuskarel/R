@@ -1,0 +1,84 @@
+```{r}
+library(ggplot2)
+library(corrplot)
+library(readr)
+library(dplyr)
+library(caret)
+library(ranger)
+library(Metrics)
+```
+
+
+```{r}
+data <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+```
+
+```{r}
+head(data)
+```
+```{r}
+str(data)
+```
+```{r}
+summary(data)
+```
+```{r}
+dim(data)
+```
+
+```{r}
+colSums(is.na(data))
+```
+```{r}
+par(mfrow=c(2,4))
+hist(data$BMI)
+hist(data$GenHlth)
+hist(data$MentHlth)
+hist(data$PhysHlth)
+hist(data$Age)
+hist(data$Income)
+hist(data$Education)
+```
+```{r}
+options(dplyr.summarise.inform = FALSE)
+counts <- data %>% group_by(Diabetes_binary, HighBP) %>% summarise(count = n())
+counts
+```
+
+```{r}
+#remove duplicate and check correlation
+data <- subset(data, !duplicated(data))
+correlations <- cor(data)
+target_correlations <- correlations["Diabetes_binary", ]
+target_correlations
+```
+
+```{r}
+
+table <- table(data$Diabetes_binary,data$GenHlth)
+chisq.test(table)
+
+```
+X-squared represents the overall discrepancy between both variables, but doesn't provide any information about both of the variables association.
+df or The degrees of freedom (df) represent the number of values that are free to vary in the calculation of the chi-square statistic.
+The p-value is a measure of the strength of evidence against the null hypothesis.
+
+since the p-value is < 0.05 ,we can conclude that Diabetes_binary has a strong relationship with General health. 
+
+```{r}
+indices <- createDataPartition(data$Diabetes_binary, p = 0.7, list = FALSE)
+train <- data[indices, ]
+test <- data[-indices, ]
+
+model <- ranger(train$Diabetes_binary ~ ., data = train, num.trees = 100)
+
+rmse(
+  test$Diabetes_binary, 
+  predict(model, test)$predictions
+)
+
+summary(model)
+
+```
+
+
