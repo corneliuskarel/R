@@ -19,6 +19,7 @@ head(data)
 ```{r}
 str(data)
 ```
+
 ```{r}
 summary(data)
 ```
@@ -48,16 +49,78 @@ counts
 ```{r}
 #remove duplicate and check correlation
 data <- subset(data, !duplicated(data))
-correlations <- cor(data)
-target_correlations <- correlations["Diabetes_binary", ]
-target_correlations
+
+# Filter binary and continuous columns
+binary_columns <- data %>%
+  select_if(function(x) all(x %in% c(0, 1)))
+
+continuous_columns <- data %>%
+  select_if(function(x) is.numeric(x) && !all(x %in% c(0, 1)))
+
+# Print the filtered columns
+dependent = binary_columns$Diabetes_binary
+binary_columns <- binary_columns[, -which(names(binary_columns) == "Diabetes_binary")]
+
+ordinal_columns <- subset(continuous_columns, select = c(Education, Income, Age))
+continuous_columns <- subset(continuous_columns, select = -c(Education, Income, Age))
 ```
 
 ```{r}
+print("Binary - Binary:")
+for (var in colnames(binary_columns)) {
+  cross_table <- table(dependent, binary_columns[[var]])
+  chi_square <- chisq.test(cross_table)$statistic
+  n <- sum(cross_table)
+  phi_coefficient <- sqrt(chi_square /n)
+  cat("Column name:", var, "\n")
+  cat("Chi-square:", chi_square, "\n")
+  cat("Phi coefficient:", phi_coefficient, "\n\n")
+}
+```
 
+
+```{r}
+library(ltm)
+print("Binary - Ordinal:")
+corr_res <- ltm(binary_columns ~ continuous_columns)
+res <- ltm.biserial(corr_res)
+
+for (var in colnames(ordinal_columns)) {
+
+  correlation_result <- ltm(continuous_columns[[var]], dependent$binary_columns.Diabetes_binary)
+
+  rank_biserial <- ltm.biserial(correlation_result)
+  
+  print(paste("Column name:", var))
+  print(paste("rank biserial:", rank_biserial))
+}
+```
+```{r}
+#redeclare data for usage
+binary_columns <- data %>%
+  select_if(function(x) all(x %in% c(0, 1)))
+
+continuous_columns <- data %>%
+  select_if(function(x) is.numeric(x) && !all(x %in% c(0, 1)))
+
+dependent = data.frame(binary_columns$Diabetes_binary)
+binary_columns <- binary_columns[, -which(names(binary_columns) == "Diabetes_binary")]
+
+ordinal_columns <- subset(continuous_columns, select = c(Education, Income, Age))
+continuous_columns <- subset(continuous_columns, select = -c(Education, Income, Age))
+
+
+print("Binary - continuos:")
+for (var in colnames(continuous_columns)) {
+  print(paste("Column name:", var))
+  print("point biserial:")
+  print(cor.test(continuous_columns[[var]], dependent$binary_columns.Diabetes_binary))
+}
+```
+
+```{r}
 table <- table(data$Diabetes_binary,data$GenHlth)
 chisq.test(table)
-
 ```
 X-squared represents the overall discrepancy between both variables, but doesn't provide any information about both of the variables association.
 df or The degrees of freedom (df) represent the number of values that are free to vary in the calculation of the chi-square statistic.
@@ -80,5 +143,7 @@ rmse(
 summary(model)
 
 ```
+
+
 
 
