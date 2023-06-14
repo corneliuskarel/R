@@ -1,0 +1,105 @@
+
+```{r}
+#import library
+library(dplyr)
+library(caret)
+library(tidyr)
+library(ggplot2)
+library(randomForest)
+library(MLmetrics)
+```
+
+```{r}
+#import dataset
+df <- read.csv("C://WA_Fn-UseC_-Telco-Customer-Churn.csv")
+head(df)
+```
+
+```{r}
+#check the descriptive statistic
+summary(df)
+```
+
+```{r}
+#check the structure
+str(df)
+```
+
+```{r}
+#check dimension
+dim(df)
+```
+
+```{r}
+#check if there are any missing value in the dataset
+sumMisVal = function(x){
+  temp <- sum(is.na(x))
+  return(temp)
+}
+sapply(X = df,FUN = sumMisVal)
+```
+
+```{r}
+#drop missing value
+df <- drop_na(df)
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(df$MonthlyCharges)
+hist(df$TotalCharges)
+hist(df$tenure)
+```
+
+
+
+```{r}
+df$gender <- ifelse(df$gender == "Male", 1, 0)
+df$Partner <- ifelse(df$Partner == "Yes", 1, 0)
+df$Dependents <- ifelse(df$Dependents == "Yes", 1, 0)
+df$PhoneService <- ifelse(df$PhoneService == "Yes", 1, 0)
+df$MultipleLines <- ifelse(df$MultipleLines == "Yes", 1, 0)
+df$InternetService <- ifelse(df$InternetService == "Fiber optic", 1, ifelse(df$InternetService == "DSL", 2, 0))
+df$OnlineSecurity <- ifelse(df$OnlineSecurity == "Yes", 1, 0)
+df$OnlineBackup <- ifelse(df$OnlineBackup == "Yes", 1, 0)
+df$DeviceProtection <- ifelse(df$DeviceProtection == "Yes", 1, 0)
+df$TechSupport <- ifelse(df$TechSupport == "Yes", 1, 0)
+df$StreamingTV <- ifelse(df$StreamingTV == "Yes", 1, 0)
+df$StreamingMovies <- ifelse(df$StreamingMovies == "Yes", 1, 0)
+df$Contract <- ifelse(df$Contract == "Month-to-month", 1, ifelse(df$Contract == "One year", 2, 3))
+df$PaperlessBilling <- ifelse(df$PaperlessBilling == "Yes", 1, 0)
+df$PaymentMethod <- ifelse(df$PaymentMethod == "Electronic check", 1, ifelse(df$PaymentMethod == "Mailed check", 2, ifelse(df$PaymentMethod == "Bank transfer (automatic)", 3, 4)))
+df$Churn <- ifelse(df$Churn == "Yes", 1, 0)
+```
+
+
+```{r}
+library(randomForest)
+
+indices <- createDataPartition(df$Churn, p = 0.7, list = FALSE)
+train <- df[indices, ]
+test <- df[-indices, ]
+
+train_X <- train[, !names(train) %in% "Churn"]  # Exclude the target column
+train_y <- train$Churn   # Target column (response variable)
+test_X <- test[, !names(test) %in% "Churn"]
+test_y <- test$Churn
+
+# Train the random forest model
+model_churn <- randomForest(x = train_X, y = train_y, ntree = 100)
+
+# Make predictions
+pred <- predict(model_churn, newdata = test_X)
+
+# Calculate the mean squared error (MSE)
+mse <- mean((pred - test_y)^2)
+rmse <- sqrt(mse)
+
+paste("the mse is",mse)
+paste("the rmse is ",rmse)
+```
+```{r}
+#summarize the model
+summary(model_churn)
+```
+
